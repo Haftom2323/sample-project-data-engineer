@@ -15,6 +15,8 @@
      * For extract, for example: `sample-project/extract/$QUERY_DATE`
 * Use the single responsibility principle to organize your code
    * Create a Python module corresponding to each phase of the job (Extract, Transform, Load).
+   * Each module should have a clearly documented "public API" set of functions
+   * The end-to-end script should import only those public API functions
    * Each module’s contract should be to read an input file and produce an output file usable by the module for next phase.
    * All output files should be UTF-8 encoded CSV files.
    * Files should be read from and written to S3.
@@ -29,7 +31,7 @@
     * Run the transformations
     * Write the transform output to `s3://$BUCKET/sample-project/transform/$QUERY_DATE/${QUERY_DATE}-transform-output.csv`
 * Load 
-  * Copy `s3://sample-project/extract/$QUERY_DATE/${QUERY_DATE}-transform-output.csv` to `s3://sample-project/load/$QUERY_DATE/${QUERY_DATE}.EMP.REC.LRF.csv`
+  * Update the end-to-end script to copy `s3://sample-project/extract/$QUERY_DATE/${QUERY_DATE}-transform-output.csv` to `s3://sample-project/load/$QUERY_DATE/${QUERY_DATE}.EMP.REC.LRF.csv`
 * All tests for the project should be runnable from the project root-level via pytest.
 * Use the AWS CLI to create an AWS Lambda that runs the job.
 * Create a simple but clear and complete README that documents:
