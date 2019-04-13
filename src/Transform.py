@@ -5,11 +5,10 @@ Created on Tue Apr  9 21:21:29 2019
 
 This is the Transform Module for my ETL code.
 It must satisfy the following contract:
-    1. Accept a QUERY DATE, S3 resource instance, boolean
-       telling function whether its being run locally or by
-       an AWS Lambda, local temp space, and a bucket name as inputs
-    2. read  s3://sample-project/extract/$QUERY_DATE/${QUERY_DATE}-extract-output.csv 
-    3. write the transformed file to
+    1. Accept a query_date, S3 resource instance, 
+       local temp space, and a bucket name as inputs
+    2. Read  s3://sample-project/extract/$QUERY_DATE/${QUERY_DATE}-extract-output.csv 
+    3. Write the transformed file to
        s3://sample-project/transform/$QUERY_DATE/${QUERY_DATE}-transform-output.csv
        such that $BUCKET == mybucket1219
 
@@ -17,11 +16,12 @@ It must satisfy the following contract:
 """
 
 import pandas as pd
+import os
 
 def transform_name(name):
     '''
         transform_name(name)
-            transform a name from "First Last" to "LAST First"
+            Transform a name from "First Last" to "LAST First"
             
             Private helper function
             
@@ -51,7 +51,7 @@ def transform_name(name):
 def transform_address(addr):
     '''
         transform_address(addr)
-            transform an address by replacing commas with spaces
+            Transform an address by replacing commas with spaces
             
             Private helper function
             
@@ -67,14 +67,14 @@ def transform_address(addr):
     '''
     return addr.replace(',',' ')
 
-def transform_function(QUERY_DATE,s3_resource,LOCAL=False,
-                     BUCKET='mybucket1219',
-                     local_temp='data/'):
+def transform(query_date, s3_resource,
+              bucket='mybucket1219',
+              local_temp='/tmp/'):
     '''
-        transform_function(QUERY_DATE,s3_resource,LOCAL=False,
-                     BUCKET='mybucket1219',
-                     local_temp='data/')
-            transform all fields of the Extract Module's output csv
+        transform(query_date, s3_resource,
+                  bucket='mybucket1219',
+                  local_temp='/tmp/')
+            Transform all fields of the Extract Module's output csv
             according to the transform spec. Upload the transformed
             csv to sample-project/extract/$QUERY_DATE/${QUERY_DATE}-transform-output.csv
             
@@ -82,49 +82,47 @@ def transform_function(QUERY_DATE,s3_resource,LOCAL=False,
             
             Parameters
             ----------
-            QUERY_DATE : str
+            query_date : str
                 A date in the form YYYY-MM-DD
             s3_resource : boto3.resources.factory.s3.ServiceResource
                 The s3 resource used for file upload/download from s3 bucket
-            LOCAL : boolean, default=False
-                Run ETL job from local machine (True) or from AWS Lambda (False)
-            BUCKET : str, default='mybucket1219'
+            bucket : str, default='mybucket1219'
                 Name of s3 bucket to read/write from
-            local_temp : str, default='data/'
+            local_temp : str, default='/tmp/'
                 Directory for storing temporary files created as part
                 of the ETL job
             
             Returns
             -------
-            none
+            None
     '''
     
     download_loc = ''
     csvfile = 'extract-output.csv'
-    s3path = 'sample-project/extract/'+str(QUERY_DATE)+'/'+str(QUERY_DATE)
+    vars = {'QUERY_DATE': query_date}
+    download_from = os.path.join('sample-project',
+                                 'extract',
+                                 str(query_date),
+                                 '{QUERY_DATE}-extract-output.csv'.format_map(vars))
+
+    download_loc = os.path.join(local_temp, csvfile)
+    s3_resource.Object(bucket, download_from).download_file(
+        download_loc)
+
     
-    if LOCAL:
-        download_loc = str(local_temp)+str(csvfile)
-        s3_resource.Object(BUCKET, s3path+'-'+csvfile).download_file(
-            download_loc)
-    else:
-        download_loc = '/tmp/'+str(csvfile)
-        s3_resource.Object(BUCKET, s3path+'-'+csvfile).download_file(
-            download_loc)
-    
-    ''' read the extract output into a pandas.DataFrame '''
+    ''' Read the extract output into a pandas.DataFrame '''
     df = pd.read_csv(download_loc)
     
-    ''' transform full_name to employee name via helper function '''
+    ''' Transform full_name to employee name via helper function. '''
     df['employee_name'] = df.apply(lambda x: transform_name(x['full_name']), 
                                    axis=1)
     
-    ''' email is a direct map to email_address, no helper needed '''
+    ''' Email is a direct map to email_address, no helper needed. '''
     df['email_address'] = df['email']
     
     ''' 
-        replace all the commas with spaces to transform address
-        into home_address via helper function
+        Replace all the commas with spaces to transform address
+        into home_address via helper function.
     '''
     df['home_address'] = df.apply(lambda x: transform_address(x['address']), 
                                   axis=1)
@@ -132,20 +130,19 @@ def transform_function(QUERY_DATE,s3_resource,LOCAL=False,
     ''' 
         df contains all columns pre and post transformations;
         use the transformed only columns to create a DataFrame
-        that pandas.to_csv can write out for upload to the S3 bucket
+        that pandas.to_csv can write out for upload to the S3 bucket.
     '''
     output_df = df[['employee_name','email_address','home_address']]
+        
+    output_loc = os.path.join(local_temp, "transformed.csv")
+    output_df.to_csv(output_loc,index=False)
     
-    output_loc = ''
-    if LOCAL:
-        output_df.to_csv(local_temp+"transformed.csv",index=False)
-        output_loc = local_temp+"transformed.csv"
-    else:
-        output_df.to_csv('/tmp/transformed.csv')
-        output_loc = '/tmp/transformed.csv'
-    
-    s3_resource.Bucket(BUCKET).upload_file(
+    vars = {'QUERY_DATE' : query_date}
+    s3_resource.Bucket(bucket).upload_file(
         Filename=output_loc, 
-        Key='sample-project/transform/'+QUERY_DATE+'/'+QUERY_DATE+'-transform_output.csv')
-
+        Key=os.path.join('sample-project',
+                         'transform',
+                         str(query_date),
+                         '{QUERY_DATE}-transform-output.csv'.format_map(vars)))
+        
     return

@@ -6,7 +6,7 @@
 
 QUERY_DATE=$1
 aws lambda invoke --function-name SampleProjectFromCLI --log-type Tail \
---payload '{"QUERY_DATE" : "'${QUERY_DATE}'"}' outputfile.txt
+--payload '{"query_date" : "'${QUERY_DATE}'"}' outputfile.txt
 
 # clean up
-rm outputfile.txt
+#rm outputfile.txt

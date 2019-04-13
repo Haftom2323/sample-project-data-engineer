@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# note that this script needs to be run from the deployAWS directory to
+# note that this script needs to be run from the scripts directory to
 # zip up the end-to-end script and its local dependencies.
 # I could have listed a machine specific absolute path for the first
 # cd command but I wanted to give this a chance to work on yours without editing;
@@ -15,7 +15,7 @@ cp -r ${libs} ../src
 
 # create the zip file of source code for my Lambda
 cd ../src
-zip -r SampleProject.zip lambda_function.py Transform.py Load.py Extract.py ${libs}
+zip -r SampleProject.zip lambda_function.py transform.py load.py extract.py ${libs}
 
 # create lambda function: SampleProjectFromCLI
 # I played with the timeout and memory-size parameters a bit and
@@ -30,4 +30,4 @@ rm SampleProject.zip
 rm -r ${libs}
 
 # return to run directory
-cd ../deployAWS
+cd ../scripts
