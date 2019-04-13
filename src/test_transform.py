@@ -5,7 +5,7 @@ Created on Wed Apr 10 00:08:32 2019
 
 @author: zackkingbackup
 """
-import Transform as T
+import transform as T
 
 def test_name():
     input_name = "Arnoldo Ross"

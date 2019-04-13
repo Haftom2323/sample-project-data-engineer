@@ -7,14 +7,15 @@ Created on Tue Apr  9 22:45:43 2019
 """
 import sys
 sys.path.append('/Users/zackkingbackup/Documents/Job Search/CapitalOne/sample-project-data-engineer/src/')
-from Extract import extract_function
-from Transform import transform_function
-from Load import load_function
+from extract import extract
+from transform import transform
+from load import load
 import argparse
 import boto3
 import os
+import json
 
-''' use argparse.parser to pick off command line args '''
+''' Use argparse.parser to pick off command line args. '''
 parser = argparse.ArgumentParser(prog='runETL',
                                  description='Run Sample Project')
 
@@ -37,43 +38,33 @@ parser.add_argument('-C', dest='clean',
 
 args = parser.parse_args()
 
-QUERY_DATE = args.date
+query_date = args.date
 local_temp = args.local_temp
 clean = args.clean
-
-''' the temp data space needs to end with a forward slash '''
-if local_temp[-1] != '/':
-    local_temp += '/'
-
-LOCAL = True
+clean = json.loads(clean.lower())
 
 if os.path.exists(os.path.join(os.getcwd(), local_temp)):
-    ''' see if the local temp space already has files in it; delete them '''
+    ''' See if the local temp space already has files in it; delete them. '''
     for temp_file in os.listdir(local_temp):
         file_path = os.path.join(local_temp, temp_file)
         if os.path.isfile(file_path):
             os.unlink(file_path)
 else:
-    ''' if the local temp space does not exist, create it '''
+    ''' Ff the local temp space does not exist, create it. '''
     os.mkdir(os.path.join(os.getcwd(), local_temp))
-    
-if clean != 'False':
-    CLEAN = True
-else:
-    CLEAN = False
-    
-''' set up an S3 resource to use for file download/upload to S3 bucket '''
+        
+''' Set up an S3 resource to use for file download/upload to S3 bucket. '''
 s3_resource = boto3.resource('s3')
 
-''' execute the ETL functions '''
-extract_function(QUERY_DATE,s3_resource,LOCAL=LOCAL,
-                     local_temp=local_temp)
-transform_function(QUERY_DATE,s3_resource,LOCAL=LOCAL,
-                     local_temp=local_temp)
-load_function(QUERY_DATE,s3_resource,LOCAL=LOCAL,
-                     local_temp=local_temp)
+''' Execute the ETL functions. '''
+extract(query_date,s3_resource,
+        local_temp=local_temp)
+transform(query_date,s3_resource,
+          local_temp=local_temp)
+load(query_date,s3_resource,
+     local_temp=local_temp)
 
-''' clean up '''
-if CLEAN:
+''' Clean up. '''
+if clean:
     import shutil
     shutil.rmtree(os.path.join(os.getcwd(), local_temp))
