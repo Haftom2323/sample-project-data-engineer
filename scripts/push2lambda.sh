@@ -11,11 +11,13 @@
 # folder in the zip archive which doesn't work well when uploaded to a Lambda. 
 libs="numpy pandas pytz"
 cd ../lib
-cp -r ${libs} ../src
+cp -r ${libs} ../myetl
 
 # create the zip file of source code for my Lambda
-cd ../src
-zip -r SampleProject.zip lambda_function.py transform.py load.py extract.py ${libs}
+cd ../myetl
+cp ../scripts/lambda_function.py .
+zip -r SampleProject.zip lambda_function.py __init__.py \
+transform.py load.py extract.py ${libs}
 
 # create lambda function: SampleProjectFromCLI
 # I played with the timeout and memory-size parameters a bit and
@@ -26,7 +28,7 @@ aws lambda create-function --function-name "SampleProjectFromCLI" --runtime "pyt
 --zip-file "fileb://SampleProject.zip"
 
 # clean up: no need for the zip once the Lambda exists, ditto for copied libraries
-rm SampleProject.zip
+rm SampleProject.zip lambda_function.py
 rm -r ${libs}
 
 # return to run directory
